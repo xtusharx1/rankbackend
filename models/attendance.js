@@ -1,6 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db'); 
-const User = require('./User');  
+const sequelize = require('../config/db');
 
 const Attendance = sequelize.define('Attendance', {
   attendance_id: {
@@ -11,6 +10,11 @@ const Attendance = sequelize.define('Attendance', {
   student_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    references: {
+      model: 'Users', // Refers to the 'Users' table
+      key: 'user_id', // Refers to the 'user_id' column in the 'Users' table
+    },
+    onDelete: 'CASCADE', // Deletes attendance if the corresponding user is deleted
   },
   attendance_date: {
     type: DataTypes.DATE,
@@ -32,8 +36,5 @@ const Attendance = sequelize.define('Attendance', {
   tableName: 'Attendance',
   timestamps: false,
 });
-
-// Define the relationship between Attendance and User (Student)
-Attendance.belongsTo(User, { foreignKey: 'student_id', as: 'student' });
 
 module.exports = Attendance;

@@ -1,6 +1,6 @@
 const express = require('express');
 const Attendance = require('../models/attendance');  // Import Attendance model
-const User = require('../models/User');  // Import User model (note the correct casing)
+//const User = require('../models/User');  // Import User model (note the correct casing)
 
 const router = express.Router();
 

@@ -13,7 +13,7 @@
     const OtherChargesRecordRoutes = require('./routes/OtherChargesRecordRoutes');
     const batchRoutes = require('./routes/BatchRoutes');  // Import the batch routes
     const studentBatchRoutes = require('./routes/StudentBatchRoutes');  // Import the student-batch routes
-
+    const RoleRoutes = require('./routes/RoleRoutes');
 
     dotenv.config(); // Load environment variables
 
@@ -39,7 +39,8 @@
     app.use('/api/otherchargesrecords', OtherChargesRecordRoutes);
     app.use('/api/batches', batchRoutes);  // Batch related routes
     app.use('/api/studentBatches', studentBatchRoutes);  // StudentBatch related routes
-
+    app.use('/api/role', RoleRoutes);  // StudentBatch related routes
+        
     // Default route for the server
     app.get('/', (req, res) => {
         res.send('Welcome to the School Management API');

@@ -2,6 +2,7 @@
     const bodyParser = require('body-parser');
     const dotenv = require('dotenv');
     const sequelize = require('./config/db');
+    const cors = require('cors'); // Import CORS package
 
     // Import all route files
     const userRoutes = require('./routes/user');
@@ -19,6 +20,7 @@
 
     const app = express();
     app.use(bodyParser.json()); // Parse JSON bodies
+    app.use(cors()); // This will allow all origins
 
     // Sync the database with models
     sequelize.sync()

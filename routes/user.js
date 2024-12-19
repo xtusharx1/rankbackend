@@ -1,6 +1,5 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
@@ -45,21 +44,8 @@ router.post('/register', async (req, res) => {
 
   res.status(201).json({ message: 'User registered successfully', user: { id: newUser.id, name, email } });
 });
+
 router.get('/roles/count', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(403).json({ message: 'No token provided, access denied' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, 'your_jwt_secret');
-    if (decoded.email !== 'admin@example.com') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-  } catch (err) {
-    return res.status(403).json({ message: 'Invalid token' });
-  }
-
   // Count users by role_id
   const roleCounts = users.reduce((acc, user) => {
     acc[user.role_id] = (acc[user.role_id] || 0) + 1;
@@ -86,26 +72,10 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials' });
   }
 
-  const token = jwt.sign({ id: user.id, email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
-
-  res.status(200).json({ message: 'Login successful', token });
+  res.status(200).json({ message: 'Login successful', user: { id: user.id, name: user.name, email: user.email } });
 });
 
 router.get('/', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(403).json({ message: 'No token provided, access denied' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, 'your_jwt_secret');
-    if (decoded.email !== 'admin@example.com') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-  } catch (err) {
-    return res.status(403).json({ message: 'Invalid token' });
-  }
-
   // Return the updated user information
   res.status(200).json(
     users.map((user) => ({

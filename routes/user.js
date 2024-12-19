@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const User = require('../models/User'); // Import the User model
+const User = require('../models/user'); // Import the User model
 const sequelize = require('../config/db'); // Import sequelize
 
 const router = express.Router();

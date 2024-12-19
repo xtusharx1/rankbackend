@@ -1,7 +1,5 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
-const FeePaymentRecord = require('./FeePaymentRecord'); // Import FeePaymentRecord model
-const OtherChargesRecord = require('./OtherChargesRecord'); // Import OtherChargesRecord model
 
 const FeeStatus = sequelize.define('FeeStatus', {
   admissionDate: {
@@ -24,16 +22,18 @@ const FeeStatus = sequelize.define('FeeStatus', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  user_id: {  // Foreign key column for User
+  user_id: { // Foreign key column for User
     type: DataTypes.INTEGER,
-    references: {
-      model: User, 
-      key: 'user_id', 
-    },
-    onDelete: 'CASCADE', // Optionally, define the deletion behavior
     allowNull: false,
+    references: {
+      model: 'Users', // Refers to the 'Users' table
+      key: 'user_id', // Refers to the 'user_id' column in the 'Users' table
+    },
+    onDelete: 'CASCADE', // Deletes FeeStatus entries if the referenced User is deleted
   },
+}, {
+  tableName: 'FeeStatus',
+  timestamps: false,
 });
-
 
 module.exports = FeeStatus;

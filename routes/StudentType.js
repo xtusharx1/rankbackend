@@ -1,6 +1,6 @@
 const express = require('express');
 const { Op } = require('sequelize');
-const StudentType = require('../models/StudentType');
+const StudentType = require('../models/student_type');
 
 const router = express.Router();
 
@@ -33,7 +33,7 @@ router.get('/:student_id', async (req, res) => {
     }
 });
 
-// ✅ Assign or update type for a student
+// ✅ Create or Update (Upsert) a student type
 router.post('/', async (req, res) => {
     const { student_id, type } = req.body;
 
@@ -53,7 +53,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// ✅ Delete a student type entry
+// ✅ Delete a student type entry by student_id
 router.delete('/:student_id', async (req, res) => {
     const { student_id } = req.params;
 

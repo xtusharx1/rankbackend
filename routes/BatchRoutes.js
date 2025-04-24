@@ -28,14 +28,16 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Count all batches (including active and inactive)
+// Count only active batches
 router.get('/count', async (req, res) => {
   try {
-    const batchCount = await Batch.count();
-    res.status(200).json({ batch_count: batchCount });
+    const activeBatchCount = await Batch.count({
+      where: { status: 'active' } // Count only batches where status is 'active'
+    });
+    res.status(200).json({ active_batch_count: activeBatchCount });
   } catch (error) {
-    console.error('Error fetching batch count:', error);
-    res.status(500).json({ message: 'Error fetching batch count', error });
+    console.error('Error fetching active batch count:', error);
+    res.status(500).json({ message: 'Error fetching active batch count', error: error.message });
   }
 });
 

@@ -1,12 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const Notice = require('../models/Notice');
+const Notice = require('../models/Notice'); // Your Notice model
 
 // Create a new notice
 router.post('/create', async (req, res) => {
   try {
-    const { title, date, description, type } = req.body;
-    const newNotice = await Notice.create({ title, date, description, type });
+    const { title, content, type, recipients } = req.body;
+
+    // Validate type
+    if (!['individual', 'batch'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid notice type. Must be "individual" or "batch".' });
+    }
+
+    // Create new notice
+    const newNotice = await Notice.create({ title, content, type, recipients });
     res.status(201).json({ message: 'Notice created successfully', data: newNotice });
   } catch (error) {
     res.status(500).json({ message: 'Error creating notice', error: error.message });
@@ -39,10 +46,18 @@ router.get('/:id', async (req, res) => {
 // Update a notice
 router.put('/:id', async (req, res) => {
   try {
-    const { title, date, description, type } = req.body;
-    const updatedNotice = await Notice.update({ title, date, description, type }, {
-      where: { notice_id: req.params.id },
-    });
+    const { title, content, type, recipients } = req.body;
+    
+    // Validate type
+    if (!['individual', 'batch'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid notice type. Must be "individual" or "batch".' });
+    }
+
+    // Update notice
+    const updatedNotice = await Notice.update(
+      { title, content, type, recipients },
+      { where: { notice_id: req.params.id } }
+    );
     if (updatedNotice[0] === 0) {
       return res.status(404).json({ message: 'Notice not found' });
     }

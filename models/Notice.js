@@ -11,16 +11,16 @@ const Notice = sequelize.define('Notice', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  date: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
-  description: {
+  content: {
     type: DataTypes.TEXT,
     allowNull: false,
   },
   type: {
-    type: DataTypes.ENUM('batch', 'all', 'for_each_student'),
+    type: DataTypes.ENUM('individual', 'batch'),
+    allowNull: false,
+  },
+  recipients: {
+    type: DataTypes.JSONB, // This can be an array or object
     allowNull: false,
   },
   created_at: {
@@ -30,7 +30,7 @@ const Notice = sequelize.define('Notice', {
   updated_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-  }
+  },
 }, {
   tableName: 'Notices',
   timestamps: false,

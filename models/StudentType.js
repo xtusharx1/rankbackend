@@ -3,7 +3,7 @@ const sequelize = require('../config/db');
 
 const studentType = sequelize.define('StudentType', {
     student_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: false,
         primaryKey: true,
         // No foreign key reference
@@ -22,7 +22,7 @@ const studentType = sequelize.define('StudentType', {
     },
 }, {
     tableName: 'student_type',
-    timestamps: false, // You are manually handling created_at/updated_at
+    timestamps: false, // Manually handling created_at and updated_at
 });
 
 module.exports = studentType;

@@ -2,6 +2,7 @@ const express = require('express');
 const StudentBatch = require('../models/studentbatch'); // Import the StudentBatch model
 const router = express.Router();
 
+const { Op, fn, col } = require('sequelize');
 // Route: Fetch all students across all batches
 router.get('/students', async (req, res) => {
   try {
@@ -19,6 +20,27 @@ router.get('/students', async (req, res) => {
     res.status(500).json({ message: 'Server error', error });
   }
 });
+router.get('/student-counts/:batch_id', async (req, res) => {
+  const { batch_id } = req.params;
+
+  try {
+    const results = await StudentBatch.findAll({
+      where: { batch_id },
+      attributes: [
+        [fn('DATE', col('created_at')), 'date'],
+        [fn('COUNT', '*'), 'student_count']
+      ],
+      group: [fn('DATE', col('created_at'))],
+      order: [[fn('DATE', col('created_at')), 'ASC']],
+    });
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error('Error fetching student count for batch:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Route: Update a student's batch
 router.put('/update', async (req, res) => {
   const { user_id, old_batch_id, new_batch_id } = req.body;

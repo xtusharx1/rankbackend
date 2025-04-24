@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Notice = require('../models/Notice'); // Your Notice model
+const admin = require('firebase-admin'); // Assuming you're using Firebase Cloud Messaging (FCM)
+const { getUserTokens } = require('../utils'); // Utility function to get user tokens
 
 // Create a new notice
 router.post('/create', async (req, res) => {
@@ -12,13 +14,38 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ message: 'Invalid notice type. Must be "individual" or "batch".' });
     }
 
-    // Create new notice
+    // Create new notice in the database
     const newNotice = await Notice.create({ title, content, type, recipients });
+
+    // Send notifications asynchronously
+    await sendNoticeNotification(recipients, title, content);
+
     res.status(201).json({ message: 'Notice created successfully', data: newNotice });
   } catch (error) {
     res.status(500).json({ message: 'Error creating notice', error: error.message });
   }
 });
+
+// Function to send notifications to users
+async function sendNoticeNotification(recipients, title, content) {
+  try {
+    // Fetch user tokens for all recipients (assuming getUserTokens fetches valid tokens from DB)
+    const userTokens = await getUserTokens(recipients);
+
+    const payload = {
+      notification: {
+        title: title,
+        body: content,
+      },
+    };
+
+    // Send notification via Firebase Cloud Messaging
+    const response = await admin.messaging().sendToDevice(userTokens, payload);
+    console.log('Notification sent successfully', response);
+  } catch (error) {
+    console.error('Error sending notification', error);
+  }
+}
 
 // Get all notices
 router.get('/', async (req, res) => {
@@ -47,21 +74,21 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { title, content, type, recipients } = req.body;
-    
+
     // Validate type
     if (!['individual', 'batch'].includes(type)) {
       return res.status(400).json({ message: 'Invalid notice type. Must be "individual" or "batch".' });
     }
 
     // Update notice
-    const updatedNotice = await Notice.update(
+    const [updatedCount, updatedNotice] = await Notice.update(
       { title, content, type, recipients },
-      { where: { notice_id: req.params.id } }
+      { where: { notice_id: req.params.id }, returning: true }
     );
-    if (updatedNotice[0] === 0) {
+    if (updatedCount === 0) {
       return res.status(404).json({ message: 'Notice not found' });
     }
-    res.status(200).json({ message: 'Notice updated successfully' });
+    res.status(200).json({ message: 'Notice updated successfully', data: updatedNotice[0] });
   } catch (error) {
     res.status(500).json({ message: 'Error updating notice', error: error.message });
   }

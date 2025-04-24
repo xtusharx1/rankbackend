@@ -291,17 +291,22 @@ router.get('/admissions/:user_id', async (req, res) => {
 // Get user counts by role_id and status
 router.get('/roles/count', async (req, res) => {
   try {
+    // Fetch the counts of users by role_id, with status = 'active'
     const roleCounts = await User.findAll({
       attributes: [
         'role_id',
         [sequelize.fn('COUNT', sequelize.col('role_id')), 'count'],
       ],
-      group: ['role_id'], // Only group by role_id, not by status
+      where: { status: 'active' },  // Only count users where status is 'active'
+      group: ['role_id'],  // Group by role_id
     });
 
-    const totalUsers = await User.count();
+    // Fetch the total count of active users
+    const totalUsers = await User.count({
+      where: { status: 'active' },  // Only count users with status 'active'
+    });
 
-    // Construct the result to have one entry for each role_id, with the count of users
+    // Construct the result to have one entry for each role_id, with the count of active users
     const result = roleCounts.map(role => ({
       role_id: role.role_id,
       count: role.dataValues.count,

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Notice = require('../models/Notice'); // Your Notice model
-const admin = require('firebase-admin'); // Firebase Admin SDK
+//const admin = require('firebase-admin'); // Firebase Admin SDK
 // const { getUserTokens } = require('../utils'); // Utility function to get user tokens
 
 // Create a new notice

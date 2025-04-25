@@ -4,85 +4,146 @@ const User = require('../models/user');
 const sequelize = require('../config/db');
 
 const router = express.Router();
-router.post('/register', async (req, res) => {
-  const {
-    name, email, password, role_id, phone_number, date_of_admission,
-    present_class, date_of_birth, total_course_fees, father_name,
-    mother_name, full_address, child_aadhar_number, mother_aadhar_number,
-    father_aadhar_number, permanent_education_number, student_registration_number,
-    previous_school_info, gender, state, status = 'active'
-  } = req.body;
-
-  if (!name || !email || !password || !role_id) {
-    return res.status(400).json({ message: 'Please provide name, email, password, and role_id' });
-  }
-
+router.post('/register', [
+  // Input validation
+  body('name').notEmpty().withMessage('Name is required'),
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  body('role_id').isInt().withMessage('Valid role ID is required'),
+  body('phone_number').optional().isString(),
+], async (req, res) => {
   try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Validation error', 
+        errors: errors.array() 
+      });
+    }
+
+    const {
+      name, email, password, role_id, phone_number, date_of_admission,
+      present_class, date_of_birth, total_course_fees, father_name,
+      mother_name, full_address, child_aadhar_number, mother_aadhar_number,
+      father_aadhar_number, permanent_education_number, student_registration_number,
+      previous_school_info, gender, state, status = 'active'
+    } = req.body;
+
+    // Check if user already exists
     const userExists = await User.findOne({ where: { email } });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'User with this email already exists' 
+      });
     }
+
+    // Check if phone number is already in use (if provided)
     if (phone_number) {
       const phoneExists = await User.findOne({ where: { phone_number } });
       if (phoneExists) {
-        return res.status(400).json({ message: 'Phone number already in use' });
+        return res.status(400).json({ 
+          success: false,
+          message: 'Phone number already in use' 
+        });
       }
     }
 
-    // Parse dates from DD-MM-YY format to YYYY-MM-DD
+    // Parse dates function - correctly handles DD-MM-YY format
     const parseDate = (dateStr) => {
-      if (!dateStr) return null;
-      const [day, month, year] = dateStr.split('-');
-      // Assuming year is in YY format, convert to YYYY
-      const fullYear = parseInt(year) + 2000; // This works for years 2000-2099
-      return `${fullYear}-${month}-${day}`;
+      if (!dateStr || dateStr.trim() === '') return null;
+      
+      try {
+        const [day, month, year] = dateStr.split('-').map(part => part.trim());
+        // Validate date parts
+        if (!day || !month || !year) return null;
+        
+        // Assuming year is in YY format, convert to YYYY
+        const fullYear = year.length === 2 ? parseInt(year) + 2000 : parseInt(year);
+        return new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+      } catch (error) {
+        console.error('Date parsing error:', error);
+        return null;
+      }
     };
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Set current timestamp for created_at and updated_at
+    const currentTime = new Date();
+
+    // Prepare user data aligned with the model
     const newUser = {
       name,
       email,
       password_hash: hashedPassword,
       role_id,
-      phone_number,
+      phone_number: phone_number || null,
       date_of_admission: parseDate(date_of_admission),
-      present_class,
+      present_class: present_class || null,
       date_of_birth: parseDate(date_of_birth),
-      total_course_fees,
-      father_name,
-      mother_name,
-      full_address,
-      child_aadhar_number,
-      mother_aadhar_number,
-      father_aadhar_number,
-      permanent_education_number,
-      student_registration_number,
-      previous_school_info,
-      gender,
-      state,
+      total_course_fees: total_course_fees || null,
+      father_name: father_name || null,
+      mother_name: mother_name || null,
+      full_address: full_address || null,
+      child_aadhar_number: child_aadhar_number || null,
+      mother_aadhar_number: mother_aadhar_number || null,
+      father_aadhar_number: father_aadhar_number || null,
+      permanent_education_number: permanent_education_number || null,
+      student_registration_number: student_registration_number || null,
+      previous_school_info: previous_school_info || null,
+      gender: gender || null,
+      state: state || null,
       status,
+      created_at: currentTime,
+      updated_at: currentTime
     };
 
-    // Create the new user without timestamps
-    const createdUser = await User.create(newUser, {
-      silent: true // This prevents automatic timestamp handling
-    });
+    // Create the new user
+    const createdUser = await User.create(newUser);
 
-    res.status(201).json({
+    // Return success response with user details
+    return res.status(201).json({
+      success: true,
       message: 'User registered successfully',
       user: {
         id: createdUser.user_id,
         name: createdUser.name,
         email: createdUser.email,
+        role_id: createdUser.role_id,
         phone_number: createdUser.phone_number,
         status: createdUser.status,
       },
     });
   } catch (error) {
     console.error('Error during user registration:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    
+    // Handle specific database errors
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'A user with this information already exists',
+        error: error.errors.map(e => e.message)
+      });
+    }
+    
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: error.errors.map(e => ({ field: e.path, message: e.message }))
+      });
+    }
+    
+    // General server error
+    return res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred'
+    });
   }
 });
 // Update user by user_id

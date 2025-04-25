@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Notice = require('../models/Notice'); // Your Notice model
-const admin = require('firebase-admin'); // Assuming you're using Firebase Cloud Messaging (FCM)
-const { getUserTokens } = require('../utils'); // Utility function to get user tokens
+const admin = require('firebase-admin'); // Firebase Admin SDK
+// const { getUserTokens } = require('../utils'); // Utility function to get user tokens
 
 // Create a new notice
 router.post('/create', async (req, res) => {
@@ -17,7 +17,7 @@ router.post('/create', async (req, res) => {
     // Create new notice in the database
     const newNotice = await Notice.create({ title, content, type, recipients });
 
-    // Send notifications asynchronously
+    // Send notifications asynchronously after the notice is created
     await sendNoticeNotification(recipients, title, content);
 
     res.status(201).json({ message: 'Notice created successfully', data: newNotice });
@@ -31,6 +31,12 @@ async function sendNoticeNotification(recipients, title, content) {
   try {
     // Fetch user tokens for all recipients (assuming getUserTokens fetches valid tokens from DB)
     const userTokens = await getUserTokens(recipients);
+
+    // Check if tokens exist
+    if (!userTokens || userTokens.length === 0) {
+      console.error('No user tokens found.');
+      return;
+    }
 
     const payload = {
       notification: {

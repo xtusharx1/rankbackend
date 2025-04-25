@@ -4,13 +4,15 @@ const User = require('../models/user');
 const sequelize = require('../config/db');
 
 const router = express.Router();
+
+// User registration endpoint with validation
 router.post('/register', [
   // Input validation
-  body('name').notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Please provide a valid email'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
-  body('role_id').isInt().withMessage('Valid role ID is required'),
-  body('phone_number').optional().isString(),
+  check('name').notEmpty().withMessage('Name is required'),
+  check('email').isEmail().withMessage('Please provide a valid email'),
+  check('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  check('role_id').isInt().withMessage('Valid role ID is required'),
+  check('phone_number').optional().isString(),
 ], async (req, res) => {
   try {
     // Check for validation errors

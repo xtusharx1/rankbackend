@@ -6,25 +6,9 @@ const sequelize = require('../config/db');
 const router = express.Router();
 
 // User registration endpoint with validation
-router.post('/register', [
-  // Input validation
-  check('name').notEmpty().withMessage('Name is required'),
-  check('email').isEmail().withMessage('Please provide a valid email'),
-  check('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
-  check('role_id').isInt().withMessage('Valid role ID is required'),
-  check('phone_number').optional().isString(),
-], async (req, res) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Validation error', 
-        errors: errors.array() 
-      });
-    }
 
+router.post('/register', async (req, res) => {
+  try {
     const {
       name, email, password, role_id, phone_number, date_of_admission,
       present_class, date_of_birth, total_course_fees, father_name,
@@ -32,6 +16,37 @@ router.post('/register', [
       father_aadhar_number, permanent_education_number, student_registration_number,
       previous_school_info, gender, state, status = 'active'
     } = req.body;
+
+    // Manual validation for required fields
+    if (!name || !email || !password || !role_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        errors: [
+          { field: 'name', message: !name ? 'Name is required' : null },
+          { field: 'email', message: !email ? 'Email is required' : null },
+          { field: 'password', message: !password ? 'Password is required' : null },
+          { field: 'role_id', message: !role_id ? 'Role ID is required' : null }
+        ].filter(error => error.message !== null)
+      });
+    }
+
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format'
+      });
+    }
+
+    // Password length validation
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
 
     // Check if user already exists
     const userExists = await User.findOne({ where: { email } });
@@ -58,7 +73,7 @@ router.post('/register', [
       if (!dateStr || dateStr.trim() === '') return null;
       
       try {
-        const [day, month, year] = dateStr.split('-').map(part => part.trim());
+        const [day, month, year] = dateStr.split('-').map(part => part ? part.trim() : '');
         // Validate date parts
         if (!day || !month || !year) return null;
         
@@ -82,12 +97,12 @@ router.post('/register', [
       name,
       email,
       password_hash: hashedPassword,
-      role_id,
+      role_id: parseInt(role_id),
       phone_number: phone_number || null,
       date_of_admission: parseDate(date_of_admission),
       present_class: present_class || null,
       date_of_birth: parseDate(date_of_birth),
-      total_course_fees: total_course_fees || null,
+      total_course_fees: total_course_fees ? parseFloat(total_course_fees) : null,
       father_name: father_name || null,
       mother_name: mother_name || null,
       full_address: full_address || null,

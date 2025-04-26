@@ -166,43 +166,19 @@ router.post('/register', async (req, res) => {
 // Update user by user_id
 router.put('/user/:user_id', async (req, res) => {
   const { user_id } = req.params;
-  const {
-    name,
-    email,
-    role_id,
-    phone_number,
-    date_of_admission,
-    present_class,
-    date_of_birth,
-    total_course_fees,
-    father_name,
-    mother_name,
-    full_address,
-    child_aadhar_number,
-    mother_aadhar_number,
-    father_aadhar_number,
-    permanent_education_number,
-    student_registration_number,
-    previous_school_info,
-    gender,
-    state,
-    status,
-    password_hash, // Rename the field from "password" to "password_hash"
-  } = req.body;
-
-  // Log incoming request body to see if it's parsed correctly
-  console.log("Request Body:", req.body);
-
+  
   try {
-    // Fetch user by user_id
-    const user = await User.findOne({ where: { user_id } });
+    // Log incoming request
+    console.log(`Received update request for user_id: ${user_id}`);
+    console.log("Request Body:", JSON.stringify(req.body, null, 2));
 
-    if (!user) {
-      return res.status(404).json({ message: `User with id ${user_id} not found` });
+    // Validate user_id
+    if (!user_id || isNaN(Number(user_id))) {
+      return res.status(400).json({ message: 'Invalid user ID format' });
     }
 
-    // Prepare updated fields
-    let updatedFields = {
+    // Extract fields from request body
+    const {
       name,
       email,
       role_id,
@@ -223,37 +199,119 @@ router.put('/user/:user_id', async (req, res) => {
       gender,
       state,
       status,
-    };
+      password_hash,
+    } = req.body;
+
+    // Basic validation for required fields
+    if (!name || !email || !phone_number || !status) {
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        required: ['name', 'email', 'phone_number', 'status'],
+        received: { name, email, phone_number, status }
+      });
+    }
+
+    // Fetch user by user_id
+    const user = await User.findOne({ where: { user_id } });
+
+    if (!user) {
+      return res.status(404).json({ message: `User with id ${user_id} not found` });
+    }
+
+    // Prepare updated fields - only include fields that are present in the request
+    const updatedFields = {};
+    
+    // Process each field only if it exists in the request body
+    if (req.body.hasOwnProperty('name')) updatedFields.name = name;
+    if (req.body.hasOwnProperty('email')) updatedFields.email = email;
+    if (req.body.hasOwnProperty('role_id')) updatedFields.role_id = role_id;
+    if (req.body.hasOwnProperty('phone_number')) updatedFields.phone_number = phone_number;
+    if (req.body.hasOwnProperty('date_of_admission')) updatedFields.date_of_admission = date_of_admission;
+    if (req.body.hasOwnProperty('present_class')) updatedFields.present_class = present_class;
+    if (req.body.hasOwnProperty('date_of_birth')) updatedFields.date_of_birth = date_of_birth;
+    if (req.body.hasOwnProperty('total_course_fees')) {
+      updatedFields.total_course_fees = total_course_fees !== null && total_course_fees !== undefined 
+        ? parseFloat(total_course_fees) 
+        : null;
+    }
+    if (req.body.hasOwnProperty('father_name')) updatedFields.father_name = father_name;
+    if (req.body.hasOwnProperty('mother_name')) updatedFields.mother_name = mother_name;
+    if (req.body.hasOwnProperty('full_address')) updatedFields.full_address = full_address;
+    if (req.body.hasOwnProperty('child_aadhar_number')) updatedFields.child_aadhar_number = child_aadhar_number;
+    if (req.body.hasOwnProperty('mother_aadhar_number')) updatedFields.mother_aadhar_number = mother_aadhar_number;
+    if (req.body.hasOwnProperty('father_aadhar_number')) updatedFields.father_aadhar_number = father_aadhar_number;
+    if (req.body.hasOwnProperty('permanent_education_number')) updatedFields.permanent_education_number = permanent_education_number;
+    if (req.body.hasOwnProperty('student_registration_number')) updatedFields.student_registration_number = student_registration_number;
+    if (req.body.hasOwnProperty('previous_school_info')) updatedFields.previous_school_info = previous_school_info;
+    if (req.body.hasOwnProperty('gender')) updatedFields.gender = gender;
+    if (req.body.hasOwnProperty('state')) updatedFields.state = state;
+    if (req.body.hasOwnProperty('status')) updatedFields.status = status;
 
     // If password_hash is provided, hash it and include it in the update
     if (password_hash) {
-      console.log("Password provided, hashing...");
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password_hash, saltRounds);
-      updatedFields.password_hash = hashedPassword; // Save hashed password to password_hash field
+      try {
+        console.log("Password provided, hashing...");
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password_hash, saltRounds);
+        updatedFields.password_hash = hashedPassword;
+      } catch (hashError) {
+        console.error('Error hashing password:', hashError);
+        return res.status(500).json({ message: 'Error processing password' });
+      }
     }
 
-    console.log("Updating user with the following fields:", updatedFields); // Log for debugging
+    console.log("Updating user with the following fields:", Object.keys(updatedFields));
 
     // Update user fields in the database
-    const updatedUser = await user.update(updatedFields);
-
-    res.status(200).json({
-      message: 'User updated successfully',
-      user: {
-        id: updatedUser.user_id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        phone_number: updatedUser.phone_number,
-        status: updatedUser.status,
-      },
-    });
+    try {
+      const updatedUser = await user.update(updatedFields);
+      
+      res.status(200).json({
+        message: 'User updated successfully',
+        user: {
+          id: updatedUser.user_id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          phone_number: updatedUser.phone_number,
+          status: updatedUser.status,
+        },
+      });
+    } catch (updateError) {
+      console.error('Database update error:', updateError);
+      
+      // Check for specific database errors
+      if (updateError.name === 'SequelizeUniqueConstraintError') {
+        return res.status(409).json({ 
+          message: 'Unique constraint violation', 
+          error: updateError.errors.map(e => ({ field: e.path, message: e.message }))
+        });
+      }
+      
+      if (updateError.name === 'SequelizeValidationError') {
+        return res.status(400).json({ 
+          message: 'Validation error', 
+          error: updateError.errors.map(e => ({ field: e.path, message: e.message }))
+        });
+      }
+      
+      throw updateError; // Re-throw for general error handling
+    }
+    
   } catch (error) {
     console.error('Error updating user:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    
+    // Return appropriate error response based on error type
+    if (error.name === 'SequelizeConnectionError') {
+      return res.status(503).json({ message: 'Database connection error', error: error.message });
+    }
+    
+    res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
-
 
 router.get('/user/:user_id', async (req, res) => {
   const { user_id } = req.params;

@@ -1,29 +1,31 @@
-// utils/notificationUtils.js
-const DeviceToken = require('../models/DeviceToken');
+const axios = require('axios');
 const admin = require('../config/firebase');
 
 /**
- * Get user tokens from database
+ * Get user tokens from external API
  * @param {Array|Number} userIds - Array of user IDs or single user ID
  * @returns {Promise<Array>} - Array of FCM tokens
  */
 async function getUserTokens(userIds) {
   try {
-    // Convert single ID to array if needed
     const ids = Array.isArray(userIds) ? userIds : [userIds];
-    
-    // Get tokens from database
-    const tokenRecords = await DeviceToken.findAll({
-      where: {
-        user_id: ids
-      },
-      attributes: ['token']
-    });
-    
-    // Extract token strings from records
-    return tokenRecords.map(record => record.token);
+    const tokens = [];
+
+    for (let userId of ids) {
+      // Fetch the token for a specific user ID from the external API
+      const response = await axios.get(`http://ec2-13-202-53-68.ap-south-1.compute.amazonaws.com:3002/api/device-tokens/${userId}`);
+      
+      if (response && response.data && response.data.data && response.data.data.length > 0) {
+        const userToken = response.data.data[0].token; // Assuming the first token in the array
+        tokens.push(userToken);
+      } else {
+        console.log(`No tokens found for user ${userId}`);
+      }
+    }
+
+    return tokens;
   } catch (error) {
-    console.error('Error fetching user tokens:', error);
+    console.error('Error fetching user tokens from API:', error);
     return [];
   }
 }
@@ -79,7 +81,6 @@ async function sendNotificationToUsers(userIds, title, body, data = {}) {
   }
 }
 
-
 /**
  * Send notification to all users
  * @param {String} title - Notification title
@@ -89,12 +90,9 @@ async function sendNotificationToUsers(userIds, title, body, data = {}) {
  */
 async function sendNotificationToAll(title, body, data = {}) {
   try {
-    // Get all tokens from database
-    const tokenRecords = await DeviceToken.findAll({
-      attributes: ['token']
-    });
-    
-    const tokens = tokenRecords.map(record => record.token);
+    // Get all tokens from external API (for simplicity, use hardcoded userIds for now)
+    const userIds = [1, 2, 3];  // Example user IDs for all users
+    const tokens = await getUserTokens(userIds);
     
     if (tokens.length === 0) {
       console.error('No tokens found in the database');
@@ -109,14 +107,13 @@ async function sendNotificationToAll(title, body, data = {}) {
       data,
       tokens,
     };
-    
+
     const response = await admin.messaging().sendMulticast(message);
-    
     console.log(`Successfully sent ${response.successCount} messages, failed to send ${response.failureCount} messages`);
     
     return {
       success: response.successCount,
-      failure: response.failureCount
+      failure: response.failureCount,
     };
   } catch (error) {
     console.error('Error sending notifications to all users:', error);

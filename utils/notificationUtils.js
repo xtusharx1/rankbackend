@@ -54,26 +54,24 @@ async function sendNotificationToUsers(userIds, title, body, data = {}) {
         body,
       },
       data,
-      tokens,
     };
 
-    // Send multicast message
-    const response = await admin.messaging().sendMulticast(message);
-    console.log('FCM Response:', response); // Log FCM response
+    // Send notification to each token individually
+    const responsePromises = tokens.map((token) =>
+      admin.messaging().send({ ...message, token })
+    );
 
-    if (response.failureCount > 0) {
-      const failedTokens = [];
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          failedTokens.push(tokens[idx]);
-        }
-      });
-      console.error('Failed tokens:', failedTokens);
-    }
+    const responses = await Promise.all(responsePromises);
+
+    const successCount = responses.filter((response) => response.success).length;
+    const failureCount = responses.filter((response) => !response.success).length;
+
+    console.log('Successfully sent notifications:', successCount);
+    console.log('Failed notifications:', failureCount);
 
     return {
-      success: response.successCount,
-      failure: response.failureCount,
+      success: successCount,
+      failure: failureCount,
     };
   } catch (error) {
     console.error('Error sending notifications:', error);

@@ -27,7 +27,7 @@ const subjectTeacherRoutes = require("./routes/subjectTeachers");
 const teacherBatch = require("./routes/TeacherbatchRoutes");
 const studentCounselorRoutes = require('./routes/studentCounselor');
 const studentTypeRoutes = require('./routes/StudentType');
-const deviceTokenRoutes = require('./routes/deviceTokenRoutes'); // Add the new device token routes
+const deviceTokenRoutes = require('./routes/DeviceToken'); // Add the new device token routes
 
 dotenv.config();
 

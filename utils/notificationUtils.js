@@ -39,12 +39,13 @@ async function getUserTokens(userIds) {
 async function sendNotificationToUsers(userIds, title, body, data = {}) {
   try {
     const tokens = await getUserTokens(userIds);
-    
+    console.log('Fetched tokens:', tokens); // Log tokens to ensure they are correct
+
     if (!tokens || tokens.length === 0) {
       console.error('No tokens found for users:', userIds);
       return { success: 0, failure: 0 };
     }
-    
+
     const message = {
       notification: {
         title,
@@ -53,13 +54,11 @@ async function sendNotificationToUsers(userIds, title, body, data = {}) {
       data,
       tokens,
     };
-    
-    // Send multicast message (more efficient than sending individual messages)
+
+    // Send multicast message
     const response = await admin.messaging().sendMulticast(message);
-    
-    console.log(`Successfully sent ${response.successCount} messages, failed to send ${response.failureCount} messages`);
-    
-    // Log failed tokens if any
+    console.log('FCM Response:', response); // Log FCM response
+
     if (response.failureCount > 0) {
       const failedTokens = [];
       response.responses.forEach((resp, idx) => {
@@ -69,16 +68,17 @@ async function sendNotificationToUsers(userIds, title, body, data = {}) {
       });
       console.error('Failed tokens:', failedTokens);
     }
-    
+
     return {
       success: response.successCount,
-      failure: response.failureCount
+      failure: response.failureCount,
     };
   } catch (error) {
     console.error('Error sending notifications:', error);
     return { success: 0, failure: 0, error: error.message };
   }
 }
+
 
 /**
  * Send notification to all users

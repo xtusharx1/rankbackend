@@ -27,9 +27,11 @@ const subjectTeacherRoutes = require("./routes/subjectTeachers");
 const teacherBatch = require("./routes/TeacherbatchRoutes");
 const studentCounselorRoutes = require('./routes/studentCounselor');
 const studentTypeRoutes = require('./routes/StudentType');
+const deviceTokenRoutes = require('./routes/deviceTokenRoutes'); // Add the new device token routes
+
 dotenv.config();
 
-const app = express();;
+const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 sequelize.sync()
@@ -37,7 +39,6 @@ sequelize.sync()
     .catch(err => console.error('Unable to sync database:', err));
 
 const server = http.createServer(app);
-
 
 app.use('/api/users', userRoutes);
 app.use('/api/attendance', attendanceRoutes);
@@ -63,6 +64,8 @@ app.use('/api/teacher-batches', teacherBatch);
 app.use('/api/student-counselor', studentCounselorRoutes);
 app.use('/api/student-types', studentTypeRoutes);
 
+// FCM device token routes
+app.use('/api', deviceTokenRoutes); 
 app.get('/', (req, res) => res.send('Welcome to the Dabad Academy API'));
 
 const PORT = 3002;

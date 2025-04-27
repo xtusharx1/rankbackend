@@ -1,8 +1,8 @@
+// routes/notice.js
 const express = require('express');
 const router = express.Router();
-const Notice = require('../models/Notice'); // Your Notice model
-//const admin = require('firebase-admin'); // Firebase Admin SDK
-// const { getUserTokens } = require('../utils'); // Utility function to get user tokens
+const Notice = require('../models/Notice');
+const { sendNotificationToUsers } = require('../utils/notificationUtils');
 
 // Create a new notice
 router.post('/create', async (req, res) => {
@@ -18,40 +18,30 @@ router.post('/create', async (req, res) => {
     const newNotice = await Notice.create({ title, content, type, recipients });
 
     // Send notifications asynchronously after the notice is created
-    await sendNoticeNotification(recipients, title, content);
+    try {
+      const notificationResult = await sendNotificationToUsers(
+        recipients, 
+        title, 
+        content,
+        { 
+          noticeId: newNotice.notice_id.toString(),
+          type: 'notice',
+          route: '/notice'
+        }
+      );
+      
+      console.log('Notification result:', notificationResult);
+    } catch (notificationError) {
+      console.error('Error sending notification:', notificationError);
+      // Continue with response even if notification fails
+    }
 
     res.status(201).json({ message: 'Notice created successfully', data: newNotice });
   } catch (error) {
+    console.error('Error creating notice:', error);
     res.status(500).json({ message: 'Error creating notice', error: error.message });
   }
 });
-
-// Function to send notifications to users
-async function sendNoticeNotification(recipients, title, content) {
-  try {
-    // Fetch user tokens for all recipients (assuming getUserTokens fetches valid tokens from DB)
-    const userTokens = await getUserTokens(recipients);
-
-    // Check if tokens exist
-    if (!userTokens || userTokens.length === 0) {
-      console.error('No user tokens found.');
-      return;
-    }
-
-    const payload = {
-      notification: {
-        title: title,
-        body: content,
-      },
-    };
-
-    // Send notification via Firebase Cloud Messaging
-    const response = await admin.messaging().sendToDevice(userTokens, payload);
-    console.log('Notification sent successfully', response);
-  } catch (error) {
-    console.error('Error sending notification', error);
-  }
-}
 
 // Get all notices
 router.get('/', async (req, res) => {

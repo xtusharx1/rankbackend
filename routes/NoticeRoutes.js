@@ -177,6 +177,29 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ message: 'Error deleting notice', error: error.message });
   }
 });
+// Get all notices for a particular student_id
+router.get('/student/:student_id', async (req, res) => {
+  try {
+    const { student_id } = req.params;
+
+    const notices = await Notice.findAll({
+      where: {
+        [sequelize.Op.or]: [
+          // If the notice is for all users (stored as batch with empty recipients)
+          { recipients: [] },
+          // If the student's ID is inside recipients array
+          sequelize.literal(`recipients::jsonb @> '[${student_id}]'::jsonb`)
+        ]
+      },
+      order: [['created_at', 'DESC']]
+    });
+
+    res.status(200).json({ data: notices });
+  } catch (error) {
+    console.error('Error fetching notices for student:', error);
+    res.status(500).json({ message: 'Error fetching notices', error: error.message });
+  }
+});
 
 // Resend notification for a notice to specific recipients
 router.post('/:id/resend', async (req, res) => {

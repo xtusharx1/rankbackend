@@ -354,6 +354,47 @@ router.get('/user/:user_id', async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
+router.get('/user/phone/:phone_number', async (req, res) => {
+  const { phone_number } = req.params;
+
+  try {
+    const user = await User.findOne({
+      where: { phone_number },
+      attributes: [
+        'user_id',
+        'name',
+        'email',
+        'role_id',
+        'phone_number',
+        'date_of_admission',
+        'present_class',
+        'date_of_birth',
+        'total_course_fees',
+        'father_name',
+        'mother_name',
+        'full_address',
+        'child_aadhar_number',
+        'mother_aadhar_number',
+        'father_aadhar_number',
+        'permanent_education_number',
+        'student_registration_number',
+        'previous_school_info',
+        'gender',
+        'state',
+        'status',
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: `User with phone number ${phone_number} not found` });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error('Error fetching user by phone number:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
 
 // Get users by role_id
 router.get('/role/:role_id', async (req, res) => {

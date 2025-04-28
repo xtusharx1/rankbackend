@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Notice = require('../models/Notice');
 const { sendNotificationToUsers, sendNotificationToAll } = require('../utils/notificationUtils');
-const sequelize = require('../config/db');
 const { Op, literal } = require('sequelize');
 
 // Create a new notice

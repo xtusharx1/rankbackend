@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Notice = require('../models/Notice');
 const { sendNotificationToUsers, sendNotificationToAll } = require('../utils/notificationUtils');
+const sequelize = require('../config/db');
 const { Op, literal } = require('sequelize');
 
 // Create a new notice
@@ -178,24 +179,24 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ message: 'Error deleting notice', error: error.message });
   }
 });
-// Get all notices for a particular student_id
 router.get('/student/:student_id', async (req, res) => {
   try {
     const { student_id } = req.params;
 
-    const notices = await Notice.findAll({
-      where: {
-        [sequelize.Op.or]: [
-          // If the notice is for all users (stored as batch with empty recipients)
-          { recipients: [] },
-          // If the student's ID is inside recipients array
-          sequelize.literal(`recipients::jsonb @> '[${student_id}]'::jsonb`)
-        ]
-      },
+    const allNotices = await Notice.findAll({
       order: [['created_at', 'DESC']]
     });
 
-    res.status(200).json({ data: notices });
+    // Filter notices manually in JS
+    const filteredNotices = allNotices.filter(notice => {
+      if (!notice.recipients || notice.recipients.length === 0) {
+        // Empty recipients means notice for all
+        return true;
+      }
+      return notice.recipients.includes(parseInt(student_id));
+    });
+
+    res.status(200).json({ data: filteredNotices });
   } catch (error) {
     console.error('Error fetching notices for student:', error);
     res.status(500).json({ message: 'Error fetching notices', error: error.message });

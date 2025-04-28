@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Notice = require('../models/Notice');
 const { sendNotificationToUsers, sendNotificationToAll } = require('../utils/notificationUtils');
+const sequelize = require('../config/db');
 
 // Create a new notice
 router.post('/create', async (req, res) => {

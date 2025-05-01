@@ -12,12 +12,11 @@ async function getUserTokens(userIds) {
     const tokens = [];
 
     for (let userId of ids) {
-      // Fetch the token for a specific user ID from the external API
       const response = await axios.get(`http://ec2-13-202-53-68.ap-south-1.compute.amazonaws.com:3002/api/device-tokens/${userId}`);
       
       if (response && response.data && response.data.data && response.data.data.length > 0) {
-        const userToken = response.data.data[0].token; // Assuming the first token in the array
-        tokens.push(userToken);
+        const userTokens = response.data.data.map(tokenObj => tokenObj.token);
+        tokens.push(...userTokens); // Spread all tokens
       } else {
         console.log(`No tokens found for user ${userId}`);
       }
@@ -29,6 +28,7 @@ async function getUserTokens(userIds) {
     return [];
   }
 }
+
 
 /**
  * Send notification to specific user IDs

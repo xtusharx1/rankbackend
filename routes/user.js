@@ -68,24 +68,6 @@ router.post('/register', async (req, res) => {
       }
     }
 
-    // Parse dates function - correctly handles DD-MM-YY format
-    const parseDate = (dateStr) => {
-      if (!dateStr || dateStr.trim() === '') return null;
-      
-      try {
-        const [day, month, year] = dateStr.split('-').map(part => part ? part.trim() : '');
-        // Validate date parts
-        if (!day || !month || !year) return null;
-        
-        // Assuming year is in YY format, convert to YYYY
-        const fullYear = year.length === 2 ? parseInt(year) + 2000 : parseInt(year);
-        return new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-      } catch (error) {
-        console.error('Date parsing error:', error);
-        return null;
-      }
-    };
-
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -99,9 +81,9 @@ router.post('/register', async (req, res) => {
       password_hash: hashedPassword,
       role_id: parseInt(role_id),
       phone_number: phone_number || null,
-      date_of_admission: parseDate(date_of_admission),
+      date_of_admission: date_of_admission || null,
       present_class: present_class || null,
-      date_of_birth: parseDate(date_of_birth),
+      date_of_birth: date_of_birth || null,
       total_course_fees: total_course_fees ? parseFloat(total_course_fees) : null,
       father_name: father_name || null,
       mother_name: mother_name || null,

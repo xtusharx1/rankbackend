@@ -3,52 +3,190 @@ const router = express.Router();
 const OtherChargesRecord = require('../models/OtherChargesRecord');
 const FeeStatus = require('../models/FeeStatus');
 
-// Add other charges
-router.post('/add-other-charges', async (req, res) => {
-    try {
-        const { title, date, amount, feeStatusId } = req.body;
-
-        // Create a new charge record
-        const newCharge = await OtherChargesRecord.create({ title, date, amount, feeStatusId });
-
-        // Update FeeStatus: Add charge to totalFees and recalculate remainingFees
-        const feeStatus = await FeeStatus.findByPk(feeStatusId);
-
-        if (!feeStatus) {
-            return res.status(404).json({ error: 'FeeStatus not found' });
-        }
-
-        const updatedTotalFees = parseFloat(feeStatus.totalFees) + parseFloat(amount);
-        const updatedRemainingFees = updatedTotalFees - parseFloat(feeStatus.feesSubmitted);
-
-        await feeStatus.update({
-            totalFees: updatedTotalFees.toFixed(2),
-            remainingFees: updatedRemainingFees.toFixed(2),
-        });
-
-        res.status(201).json({ message: 'Other charges added successfully', newCharge, feeStatus });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+// Get all other charge records
+router.get('/', async (req, res) => {
+  try {
+    const charges = await OtherChargesRecord.findAll();
+    res.json(charges);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Fetch all other charge records for a student
-router.get('/charges/:feeStatusId', async (req, res) => {
-    try {
-        const { feeStatusId } = req.params;
+// Get a single charge record by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const charge = await OtherChargesRecord.findByPk(req.params.id);
+    if (!charge) return res.status(404).json({ error: 'Charge record not found' });
+    res.json(charge);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-        const charges = await OtherChargesRecord.findAll({
-            where: { feeStatusId },
-        });
+// Fetch all other charge records for a student's fee status
+router.get('/fee-status/:feeStatusId', async (req, res) => {
+  try {
+    const { feeStatusId } = req.params;
 
-        if (!charges.length) {
-            return res.status(404).json({ error: 'No charge records found' });
-        }
+    const charges = await OtherChargesRecord.findAll({
+      where: { feeStatusId },
+      order: [['date', 'DESC']]
+    });
 
-        res.status(200).json(charges);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (!charges.length) {
+      return res.status(404).json({ message: 'No charge records found for this fee status' });
     }
+
+    res.status(200).json(charges);
+  } catch (error) {
+    console.error('Error fetching charge records:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add other charges
+router.post('/', async (req, res) => {
+  try {
+    const { title, date, amount, feeStatusId } = req.body;
+
+    // Create a new charge record
+    const newCharge = await OtherChargesRecord.create({ title, date, amount, feeStatusId });
+
+    // Update FeeStatus
+    const feeStatus = await FeeStatus.findByPk(feeStatusId);
+
+    if (!feeStatus) {
+      return res.status(404).json({ error: 'FeeStatus not found' });
+    }
+
+    const updatedTotalFees = parseFloat(feeStatus.totalFees) + parseFloat(amount);
+    const updatedRemainingFees = updatedTotalFees - parseFloat(feeStatus.feesSubmitted);
+
+    // Update payment completion status
+    const paymentCompleted = updatedRemainingFees <= 0;
+
+    await feeStatus.update({
+      totalFees: updatedTotalFees.toFixed(2),
+      remainingFees: updatedRemainingFees.toFixed(2),
+      paymentCompleted: paymentCompleted,
+      nextDueDate: paymentCompleted ? null : feeStatus.nextDueDate
+    });
+
+    res.status(201).json({ 
+      message: 'Other charges added successfully', 
+      charge: newCharge,
+      feeStatus: await FeeStatus.findByPk(feeStatusId)
+    });
+  } catch (error) {
+    console.error('Error adding charge:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Edit other charges
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, date, amount, feeStatusId } = req.body;
+    
+    // Find the existing charge record
+    const chargeRecord = await OtherChargesRecord.findByPk(id);
+    
+    if (!chargeRecord) {
+      return res.status(404).json({ error: 'Charge record not found' });
+    }
+    
+    // Get the original amount before updating
+    const originalAmount = parseFloat(chargeRecord.amount);
+    const newAmount = parseFloat(amount);
+    const amountDifference = newAmount - originalAmount;
+    
+    // Update the charge record
+    const updatedCharge = await chargeRecord.update({
+      title,
+      date,
+      amount,
+      feeStatusId
+    });
+    
+    // Update the related FeeStatus record if amount changed
+    if (amountDifference !== 0) {
+      const feeStatus = await FeeStatus.findByPk(feeStatusId);
+      
+      if (feeStatus) {
+        // Recalculate fees
+        const updatedTotalFees = parseFloat(feeStatus.totalFees) + amountDifference;
+        const updatedRemainingFees = updatedTotalFees - parseFloat(feeStatus.feesSubmitted);
+        
+        // Check if payment is complete
+        const paymentCompleted = updatedRemainingFees <= 0;
+        
+        await feeStatus.update({
+          totalFees: updatedTotalFees.toFixed(2),
+          remainingFees: updatedRemainingFees.toFixed(2),
+          paymentCompleted: paymentCompleted,
+          nextDueDate: paymentCompleted ? null : feeStatus.nextDueDate
+        });
+      }
+    }
+    
+    res.status(200).json({ 
+      message: 'Charge record updated successfully', 
+      charge: updatedCharge,
+      feeStatus: await FeeStatus.findByPk(feeStatusId)
+    });
+  } catch (error) {
+    console.error('Error updating charge record:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete other charges
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find the charge record
+    const chargeRecord = await OtherChargesRecord.findByPk(id);
+    
+    if (!chargeRecord) {
+      return res.status(404).json({ error: 'Charge record not found' });
+    }
+    
+    const amount = parseFloat(chargeRecord.amount);
+    const feeStatusId = chargeRecord.feeStatusId;
+    
+    // Delete the charge record
+    await chargeRecord.destroy();
+    
+    // Update the FeeStatus
+    const feeStatus = await FeeStatus.findByPk(feeStatusId);
+    
+    if (feeStatus) {
+      // Recalculate fees
+      const updatedTotalFees = parseFloat(feeStatus.totalFees) - amount;
+      const updatedRemainingFees = updatedTotalFees - parseFloat(feeStatus.feesSubmitted);
+      
+      // Check if payment is complete
+      const paymentCompleted = updatedRemainingFees <= 0;
+      
+      await feeStatus.update({
+        totalFees: updatedTotalFees.toFixed(2),
+        remainingFees: updatedRemainingFees.toFixed(2),
+        paymentCompleted: paymentCompleted,
+        nextDueDate: paymentCompleted ? null : feeStatus.nextDueDate
+      });
+    }
+    
+    res.status(200).json({ 
+      message: 'Charge record deleted successfully',
+      feeStatus: await FeeStatus.findByPk(feeStatusId)
+    });
+  } catch (error) {
+    console.error('Error deleting charge record:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

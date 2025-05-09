@@ -1,13 +1,12 @@
 const express = require('express');
 const FeeStatus = require('../models/FeeStatus');
-
 const { Op, Sequelize } = require('sequelize');
 const router = express.Router();
 
 // Get all fee statuses
 router.get('/', async (req, res) => {
   try {
-    const feeStatuses = await FeeStatus.findAll(); // This now includes paymentCompleted field
+    const feeStatuses = await FeeStatus.findAll();
     res.json(feeStatuses);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -29,7 +28,7 @@ router.get('/user/:user_id', async (req, res) => {
         'remainingFees',
         'nextDueDate',
         'user_id',
-        'paymentCompleted', // Add this to the response
+        'paymentCompleted',
       ],
     });
 
@@ -88,7 +87,7 @@ router.get('/upcoming-dues', async (req, res) => {
         'remainingFees',
         'nextDueDate',
         'user_id',
-        'paymentCompleted', // Add paymentCompleted to the results
+        'paymentCompleted',
       ],
     });
 
@@ -112,13 +111,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create a new fee status (with paymentCompleted)
+// Create a new fee status
 router.post('/', async (req, res) => {
   try {
-    // Ensure the paymentCompleted field is included in the request body
     const feeStatus = await FeeStatus.create({
-      ...req.body, // Includes the paymentCompleted field from the request body
-      paymentCompleted: req.body.paymentCompleted || false, // Default to false if not provided
+      ...req.body,
+      paymentCompleted: req.body.paymentCompleted || false,
     });
     res.status(201).json(feeStatus);
   } catch (err) {
@@ -126,13 +124,14 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Update fee status
 router.put('/:id', async (req, res) => {
   try {
     const { paymentCompleted, nextDueDate, feesSubmitted, remainingFees } = req.body;
 
     const updatedData = {
       ...req.body,
-      nextDueDate: paymentCompleted ? null : nextDueDate, // Set nextDueDate to null if payment is completed
+      nextDueDate: paymentCompleted ? null : nextDueDate,
     };
 
     const [updated] = await FeeStatus.update(updatedData, {
@@ -147,8 +146,6 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
 
 // Delete a fee status
 router.delete('/:id', async (req, res) => {

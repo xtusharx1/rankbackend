@@ -48,10 +48,16 @@ router.get('/fee-status/:feeStatusId', async (req, res) => {
 // Add other charges
 router.post('/', async (req, res) => {
   try {
-    const { title, date, amount, feeStatusId } = req.body;
+    const { title, date, amount, description, feeStatusId } = req.body;
 
     // Create a new charge record
-    const newCharge = await OtherChargesRecord.create({ title, date, amount, feeStatusId });
+    const newCharge = await OtherChargesRecord.create({ 
+      title, 
+      date, 
+      amount, 
+      description, 
+      feeStatusId 
+    });
 
     // Update FeeStatus
     const feeStatus = await FeeStatus.findByPk(feeStatusId);
@@ -88,7 +94,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, date, amount, feeStatusId } = req.body;
+    const { title, date, amount, description, feeStatusId } = req.body;
     
     // Find the existing charge record
     const chargeRecord = await OtherChargesRecord.findByPk(id);
@@ -107,6 +113,7 @@ router.put('/:id', async (req, res) => {
       title,
       date,
       amount,
+      description,
       feeStatusId
     });
     

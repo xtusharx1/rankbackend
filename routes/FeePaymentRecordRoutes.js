@@ -48,13 +48,14 @@ router.get('/fee-status/:feeStatusId', async (req, res) => {
 // Add a payment record
 router.post('/', async (req, res) => {
   try {
-    const { title, date, amount, isPaid, feeStatusId } = req.body;
+    const { title, date, amount, description, isPaid, feeStatusId } = req.body;
 
     // Create a new payment record
     const newPayment = await FeePaymentRecord.create({ 
       title, 
       date, 
       amount, 
+      description,
       isPaid: isPaid !== undefined ? isPaid : true,
       feeStatusId 
     });
@@ -94,7 +95,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, date, amount, isPaid, feeStatusId } = req.body;
+    const { title, date, amount, description, isPaid, feeStatusId } = req.body;
     
     // Find the existing payment record
     const paymentRecord = await FeePaymentRecord.findByPk(id);
@@ -113,6 +114,7 @@ router.put('/:id', async (req, res) => {
       title,
       date,
       amount,
+      description,
       isPaid,
       feeStatusId
     });

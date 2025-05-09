@@ -15,6 +15,11 @@ const FeePaymentRecord = sequelize.define('FeePaymentRecord', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    defaultValue: null,
+  },
   isPaid: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,

@@ -15,6 +15,11 @@ const OtherChargesRecord = sequelize.define('OtherChargesRecord', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    defaultValue: null,
+  },
   feeStatusId: {
     type: DataTypes.INTEGER,
     references: {

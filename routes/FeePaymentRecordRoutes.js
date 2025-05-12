@@ -44,6 +44,26 @@ router.get('/fee-status/:feeStatusId', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// Fetch all payment records for a student's fee status
+router.get('/payments/:feeStatusId', async (req, res) => {
+  try {
+    const { feeStatusId } = req.params;
+
+    const payments = await FeePaymentRecord.findAll({
+      where: { feeStatusId },
+      order: [['date', 'DESC']]
+    });
+
+    if (!payments.length) {
+      return res.status(404).json({ message: 'No payment records found for this fee status' });
+    }
+
+    res.status(200).json(payments);
+  } catch (error) {
+    console.error('Error fetching payment records:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Add a payment record
 router.post('/', async (req, res) => {

@@ -44,7 +44,25 @@ router.get('/fee-status/:feeStatusId', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+router.get('/charges/:feeStatusId', async (req, res) => {
+  try {
+    const { feeStatusId } = req.params;
 
+    const charges = await OtherChargesRecord.findAll({
+      where: { feeStatusId },
+      order: [['date', 'DESC']]
+    });
+
+    if (!charges.length) {
+      return res.status(404).json({ message: 'No charge records found for this fee status' });
+    }
+
+    res.status(200).json(charges);
+  } catch (error) {
+    console.error('Error fetching charge records:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 // Add other charges
 router.post('/', async (req, res) => {
   try {

@@ -294,7 +294,52 @@ router.put('/user/:user_id', async (req, res) => {
     });
   }
 });
-
+// Add a new route specifically for password change
+router.put('/user/:user_id/change-password', async (req, res) => {
+  const { user_id } = req.params;
+  const { new_password } = req.body;
+  
+  try {
+    // Log incoming request
+    console.log(`Received password change request for user_id: ${user_id}`);
+    
+    // Validate user_id
+    if (!user_id || isNaN(Number(user_id))) {
+      return res.status(400).json({ message: 'Invalid user ID format' });
+    }
+    
+    // Validate new password
+    if (!new_password) {
+      return res.status(400).json({ message: 'New password is required' });
+    }
+    
+    // Fetch user by user_id
+    const user = await User.findOne({ where: { user_id } });
+    
+    if (!user) {
+      return res.status(404).json({ message: `User with id ${user_id} not found` });
+    }
+    
+    // Hash the new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(new_password, saltRounds);
+    
+    // Update only the password
+    await user.update({ password_hash: hashedPassword });
+    
+    res.status(200).json({
+      message: 'Password changed successfully',
+      user_id: user.user_id
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
 router.get('/user/:user_id', async (req, res) => {
   const { user_id } = req.params;
 

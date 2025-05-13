@@ -159,6 +159,13 @@ router.put('/user/:user_id', async (req, res) => {
       return res.status(400).json({ message: 'Invalid user ID format' });
     }
 
+    // Fetch user by user_id first to ensure it exists
+    const user = await User.findOne({ where: { user_id } });
+
+    if (!user) {
+      return res.status(404).json({ message: `User with id ${user_id} not found` });
+    }
+
     // Extract fields from request body
     const {
       name,
@@ -184,30 +191,37 @@ router.put('/user/:user_id', async (req, res) => {
       password_hash,
     } = req.body;
 
-    // Basic validation for required fields
-    if (!name || !email || !phone_number || !status) {
+    // MODIFIED: Check required fields only if they are being updated
+    // If a field is not provided in the request, use the existing value
+    const validatedName = req.body.hasOwnProperty('name') ? name : user.name;
+    const validatedEmail = req.body.hasOwnProperty('email') ? email : user.email;
+    const validatedPhone = req.body.hasOwnProperty('phone_number') ? phone_number : user.phone_number;
+    const validatedStatus = req.body.hasOwnProperty('status') ? status : user.status;
+
+    // Now validate that the fields (either new or existing) are valid
+    if (!validatedName || !validatedEmail || !validatedPhone || !validatedStatus) {
       return res.status(400).json({ 
-        message: 'Missing required fields',
+        message: 'Invalid field values',
         required: ['name', 'email', 'phone_number', 'status'],
-        received: { name, email, phone_number, status }
+        received: { 
+          name: validatedName, 
+          email: validatedEmail, 
+          phone_number: validatedPhone, 
+          status: validatedStatus 
+        }
       });
     }
 
-    // Fetch user by user_id
-    const user = await User.findOne({ where: { user_id } });
-
-    if (!user) {
-      return res.status(404).json({ message: `User with id ${user_id} not found` });
-    }
-
-    // Prepare updated fields - only include fields that are present in the request
-    const updatedFields = {};
+    // Prepare updated fields - start with validated required fields
+    const updatedFields = {
+      name: validatedName,
+      email: validatedEmail,
+      phone_number: validatedPhone,
+      status: validatedStatus,
+    };
     
-    // Process each field only if it exists in the request body
-    if (req.body.hasOwnProperty('name')) updatedFields.name = name;
-    if (req.body.hasOwnProperty('email')) updatedFields.email = email;
+    // Process optional fields only if they exist in the request body
     if (req.body.hasOwnProperty('role_id')) updatedFields.role_id = role_id;
-    if (req.body.hasOwnProperty('phone_number')) updatedFields.phone_number = phone_number;
     if (req.body.hasOwnProperty('date_of_admission')) updatedFields.date_of_admission = date_of_admission;
     if (req.body.hasOwnProperty('present_class')) updatedFields.present_class = present_class;
     if (req.body.hasOwnProperty('date_of_birth')) updatedFields.date_of_birth = date_of_birth;
@@ -227,7 +241,6 @@ router.put('/user/:user_id', async (req, res) => {
     if (req.body.hasOwnProperty('previous_school_info')) updatedFields.previous_school_info = previous_school_info;
     if (req.body.hasOwnProperty('gender')) updatedFields.gender = gender;
     if (req.body.hasOwnProperty('state')) updatedFields.state = state;
-    if (req.body.hasOwnProperty('status')) updatedFields.status = status;
 
     // If password_hash is provided, hash it and include it in the update
     if (password_hash) {

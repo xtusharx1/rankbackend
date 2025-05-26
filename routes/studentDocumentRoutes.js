@@ -236,34 +236,44 @@ router.put('/student-documents/:userId/numbers', async (req, res) => {
 
     console.log(`Updating numbers for user ${userId}:`, { srn_number, pen_number });
 
-    // Use upsert to create or update - this handles both cases automatically
-    const [studentDocuments, created] = await StudentDocuments.upsert({
-      user_id: userId,
-      birth_certificate: null,
-      student_adhaar_card: null,
-      father_adhaar_card: null,
-      mother_adhaar_card: null,
-      previous_school_marksheet: null,
-      school_leaving_certificate: null,
-      srn_number: srn_number || null,
-      pen_number: pen_number || null,
-      created_at: new Date(),
-      updated_at: new Date()
-    }, {
-      returning: true  // Make sure we get the updated record back
+    // First try to find existing record
+    let studentDocuments = await StudentDocuments.findOne({
+      where: { user_id: userId }
     });
 
-    if (created) {
-      console.log('New record created for user:', userId);
-      return res.status(201).json({ 
-        message: 'Student document record created and numbers added successfully',
+    if (studentDocuments) {
+      // Update existing record
+      await studentDocuments.update({
+        srn_number: srn_number || studentDocuments.srn_number,
+        pen_number: pen_number || studentDocuments.pen_number,
+        updated_at: new Date()
+      });
+
+      console.log('Existing record updated for user:', userId);
+      return res.status(200).json({ 
+        message: 'Numbers updated successfully',
         srn_number: studentDocuments.srn_number,
         pen_number: studentDocuments.pen_number
       });
     } else {
-      console.log('Existing record updated for user:', userId);
-      return res.status(200).json({ 
-        message: 'Numbers updated successfully',
+      // Create new record
+      studentDocuments = await StudentDocuments.create({
+        user_id: userId,
+        birth_certificate: null,
+        student_adhaar_card: null,
+        father_adhaar_card: null,
+        mother_adhaar_card: null,
+        previous_school_marksheet: null,
+        school_leaving_certificate: null,
+        srn_number: srn_number || null,
+        pen_number: pen_number || null,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+
+      console.log('New record created for user:', userId);
+      return res.status(201).json({ 
+        message: 'Student document record created and numbers added successfully',
         srn_number: studentDocuments.srn_number,
         pen_number: studentDocuments.pen_number
       });

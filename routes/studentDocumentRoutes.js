@@ -228,32 +228,48 @@ router.get('/student-documents', async (req, res) => {
 });
 
 // Update SRN/PEN numbers only
+// Update SRN/PEN numbers only - Create record if doesn't exist
 router.put('/student-documents/:userId/numbers', async (req, res) => {
   try {
     const userId = req.params.userId;
     const { srn_number, pen_number } = req.body;
 
-    const studentDocuments = await StudentDocuments.findOne({
-      where: { user_id: userId }
-    });
+    console.log(`Updating numbers for user ${userId}:`, { srn_number, pen_number });
 
-    if (!studentDocuments) {
-      return res.status(404).json({ message: 'Student documents not found' });
-    }
-
-    await studentDocuments.update({
-      srn_number: srn_number || studentDocuments.srn_number,
-      pen_number: pen_number || studentDocuments.pen_number,
+    // Use upsert to create or update - this handles both cases automatically
+    const [studentDocuments, created] = await StudentDocuments.upsert({
+      user_id: userId,
+      birth_certificate: null,
+      student_adhaar_card: null,
+      father_adhaar_card: null,
+      mother_adhaar_card: null,
+      previous_school_marksheet: null,
+      school_leaving_certificate: null,
+      srn_number: srn_number || null,
+      pen_number: pen_number || null,
+      created_at: new Date(),
       updated_at: new Date()
+    }, {
+      returning: true  // Make sure we get the updated record back
     });
 
-    res.status(200).json({ 
-      message: 'Numbers updated successfully',
-      srn_number: studentDocuments.srn_number,
-      pen_number: studentDocuments.pen_number
-    });
+    if (created) {
+      console.log('New record created for user:', userId);
+      return res.status(201).json({ 
+        message: 'Student document record created and numbers added successfully',
+        srn_number: studentDocuments.srn_number,
+        pen_number: studentDocuments.pen_number
+      });
+    } else {
+      console.log('Existing record updated for user:', userId);
+      return res.status(200).json({ 
+        message: 'Numbers updated successfully',
+        srn_number: studentDocuments.srn_number,
+        pen_number: studentDocuments.pen_number
+      });
+    }
   } catch (error) {
-    console.error(error);
+    console.error('Error in numbers update route:', error);
     res.status(500).json({ 
       message: 'Error updating numbers', 
       error: error.message 

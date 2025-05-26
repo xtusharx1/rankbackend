@@ -1,7 +1,5 @@
-// models/studentDocuments.js
-
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db'); // Assuming your DB config is in this file
+const sequelize = require('../config/db');
 
 const StudentDocuments = sequelize.define('StudentDocuments', {
   document_id: {
@@ -9,41 +7,49 @@ const StudentDocuments = sequelize.define('StudentDocuments', {
     autoIncrement: true,
     primaryKey: true,
   },
-  student_id: {
+  user_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    references: {
-      model: 'Users',
-      key: 'user_id',
-    },
   },
-  birth_certificate_url: {
+  birth_certificate: {
     type: DataTypes.STRING,
     allowNull: true,
+    comment: 'File path for birth certificate'
   },
-  student_aadhar_card_url: {
+  student_adhaar_card: {
     type: DataTypes.STRING,
     allowNull: true,
+    comment: 'File path for student adhaar card'
   },
-  father_aadhar_card_url: {
+  father_adhaar_card: {
     type: DataTypes.STRING,
     allowNull: true,
+    comment: 'File path for father adhaar card'
   },
-  mother_aadhar_card_url: {
+  mother_adhaar_card: {
     type: DataTypes.STRING,
     allowNull: true,
+    comment: 'File path for mother adhaar card'
+  },
+  previous_school_marksheet: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'File path for previous school marksheet'
+  },
+  school_leaving_certificate: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'File path for school leaving certificate'
   },
   srn_number: {
     type: DataTypes.STRING,
     allowNull: true,
+    comment: 'SRN number'
   },
   pen_number: {
     type: DataTypes.STRING,
     allowNull: true,
-  },
-  school_transfer_certificate_url: {
-    type: DataTypes.STRING,
-    allowNull: true,
+    comment: 'PEN number'
   },
   created_at: {
     type: DataTypes.DATE,

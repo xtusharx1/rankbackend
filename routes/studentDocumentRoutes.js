@@ -21,7 +21,49 @@ const upload = multer({
     }
   }
 });
+// Create student document record with numbers only (no file uploads)
+router.post('/student-documents/create', async (req, res) => {
+  try {
+    const { user_id, srn_number, pen_number } = req.body;
 
+    if (!user_id) {
+      return res.status(400).json({ message: 'user_id is required' });
+    }
+
+    // Create or update student documents record
+    const [studentDocuments, created] = await StudentDocuments.upsert({
+      user_id,
+      birth_certificate: null,
+      student_adhaar_card: null,
+      father_adhaar_card: null,
+      mother_adhaar_card: null,
+      previous_school_marksheet: null,
+      school_leaving_certificate: null,
+      srn_number: srn_number || null,
+      pen_number: pen_number || null,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    if (created) {
+      return res.status(201).json({ 
+        message: 'Student document record created successfully', 
+        studentDocuments 
+      });
+    } else {
+      return res.status(200).json({ 
+        message: 'Student document record updated successfully', 
+        studentDocuments 
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      message: 'Error creating student document record', 
+      error: error.message 
+    });
+  }
+});
 // Upload multiple student documents
 router.post('/student-documents', upload.fields([
   { name: 'birth_certificate', maxCount: 1 },

@@ -35,12 +35,13 @@ const parseIntSafe = (value) => {
 const buildWhereClause = (params) => {
   const whereClause = {};
   
-  // Gender filter - using LIKE for flexibility (Boy->Male, Girl->Female mapping)
+  // Gender filter - using exact match instead of LIKE
   if (params.gender) {
-    let genderPattern = params.gender;
-    if (params.gender === 'Boy') genderPattern = 'Male';
-    if (params.gender === 'Girl') genderPattern = 'Female';
-    whereClause.gender = { [Op.iLike]: `%${genderPattern}%` };
+    let genderValue = params.gender;
+    if (params.gender === 'Boy') genderValue = 'Male';
+    if (params.gender === 'Girl') genderValue = 'Female';
+    // Use exact match instead of LIKE pattern
+    whereClause.gender = genderValue;
   }
 
   // Category filter - using LIKE for all categories to handle variations

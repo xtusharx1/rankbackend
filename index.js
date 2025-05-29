@@ -1,72 +1,47 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
-const sequelize = require('./config/db');
+const sequelize = require('./config/database');
 const cors = require('cors');
 const http = require('http');
-const userRoutes = require('./routes/user');
-const attendanceRoutes = require('./routes/AttendanceRoutes');
-const feePaymentRoutes = require('./routes/FeePaymentRecordRoutes');
-const feeStatusRoutes = require('./routes/FeeStatusRoutes');
-const noticeRoutes = require('./routes/NoticeRoutes');
-const documentRoutes = require('./routes/studentDocumentRoutes');
-const OtherChargesRecordRoutes = require('./routes/OtherChargesRecordRoutes');
-const batchRoutes = require('./routes/BatchRoutes');
-const studentBatchRoutes = require('./routes/StudentBatchRoutes');
-const RoleRoutes = require('./routes/RoleRoutes');
-const TestRoutes = require('./routes/tests');
-const StudentTestRecordsRoutes = require('./routes/Studenttestrecords');
-const AttendanceRoutes = require('./routes/AttendanceRoutes');
-const subjectRoutes = require('./routes/SubjectRoutes');
-const WhatsAppRoutes = require('./routes/whatsapproutes');
-const visitsRoutes = require('./routes/visits');
-const schoolRoutes = require('./routes/schools');
-const marketingPersonnel = require('./routes/marketingPersonnel')
-const teacherReportRoutes = require("./routes/teacherReport");
-const subjectTeacherRoutes = require("./routes/subjectTeachers");
-const teacherBatch = require("./routes/TeacherbatchRoutes");
-const studentCounselorRoutes = require('./routes/studentCounselor');
-const studentTypeRoutes = require('./routes/StudentType');
-const deviceTokenRoutes = require('./routes/DeviceToken'); // Add the new device token routes
+
+// Import routes
+const rankTrackerRoutes = require('./routes/tracker');
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
+
+// Set JSON formatting for development
+if (process.env.NODE_ENV === 'development') {
+  app.set('json spaces', 2);
+}
+
+// Database sync
 sequelize.sync()
     .then(() => console.log('Database synced'))
     .catch(err => console.error('Unable to sync database:', err));
 
 const server = http.createServer(app);
 
-app.use('/api/users', userRoutes);
-app.use('/api/attendance', attendanceRoutes);
-app.use('/api/feepaymentrecords', feePaymentRoutes);
-app.use('/api/feestatus', feeStatusRoutes);
-app.use('/api/notices', noticeRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/otherchargesrecords', OtherChargesRecordRoutes);
-app.use('/api/batches', batchRoutes);
-app.use('/api/studentBatches', studentBatchRoutes);
-app.use('/api/role', RoleRoutes);
-app.use('/api/test', TestRoutes);
-app.use('/api/studenttestrecords', StudentTestRecordsRoutes);
-app.use('/api/subjects', subjectRoutes);
-app.use('/api/attendance', AttendanceRoutes);
-app.use('/api/whatsapp', WhatsAppRoutes);
-app.use('/api/schools',schoolRoutes);
-app.use('/api/marketing-personnel',marketingPersonnel);
-app.use('/api/visits',visitsRoutes);
-app.use('/api/teacher-report',teacherReportRoutes)
-app.use('/api/subject-teachers', subjectTeacherRoutes)
-app.use('/api/teacher-batches', teacherBatch);
-app.use('/api/student-counselor', studentCounselorRoutes);
-app.use('/api/student-types', studentTypeRoutes);
+// Routes
+app.use('/api/rank-tracker', rankTrackerRoutes);
 
-// FCM device token routes
-app.use('/api', deviceTokenRoutes); 
-app.get('/', (req, res) => res.send('Welcome to the Dabad Academy API'));
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Welcome to Sainik School Rank Tracker API',
+    version: '1.0.0',
+    endpoints: {
+      main: [
+        'GET /api/rank-tracker/students - Get students list based on filters',
+        'GET /api/rank-tracker/options - Get dropdown options for frontend'
+      ]
+    }
+  });
+});
 
-const PORT = 3002;
+const PORT = process.env.PORT || 3002;
 server.listen(PORT, () => console.log(`Server is running on port ${PORT}`));

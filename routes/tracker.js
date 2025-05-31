@@ -290,10 +290,10 @@ router.get('/options', async (req, res) => {
 // Get vacancies by filters (Class, State, Category, Gender, State Type)
 router.get('/vacancies', async (req, res) => {
   try {
-    const { 
-      class_level, 
-      home_state, 
-      category, 
+    const {
+      class_level,
+      home_state,
+      category,
       gender,
       state_type,
       school_name,
@@ -305,6 +305,12 @@ router.get('/vacancies', async (req, res) => {
     } = req.query;
 
     const whereClause = {};
+    // Ensure Op is imported for Sequelize operators (like Op.iLike, Op.gte, Op.lte)
+    // You might already have this at the top of your file like:
+    // const { Op } = require('sequelize');
+    // If not, add it here or at the top of your route file
+    const { Op } = require('sequelize');
+
 
     // Class level filter - FIXED: Database stores "6"/"9", not "VI"/"IX"
     if (class_level) {
@@ -331,19 +337,21 @@ router.get('/vacancies', async (req, res) => {
         'Male': 'Boy',       // map Male to Boy for database compatibility
         'Female': 'Girl'     // map Female to Girl for database compatibility
       };
+      // Use the mapped gender, or the original if not found in map (though map should cover all expected inputs)
       whereClause.gender = genderMap[gender] || gender;
     }
 
-    // Category filter - map frontend to database values
+    // Category filter - map frontend to database values - ***THIS IS THE KEY FIX***
     if (category) {
       const categoryMap = {
-        'GEN': 'GENERAL',
-        'GENERAL': 'GENERAL',
+        'GEN': 'GEN',         // <--- CHANGED: Now maps 'GEN' to 'GEN' to match your database
+        'GENERAL': 'GENERAL', // Keep this if you have 'GENERAL' entries in DB
         'OBC NCL': 'OBC NCL',
         'SC': 'SC',
-        'ST': 'ST', 
+        'ST': 'ST',
         'DEF': 'DEF'
       };
+      // Use the mapped category, or the original if not found in map
       whereClause.category = categoryMap[category] || category;
     }
 
@@ -353,12 +361,13 @@ router.get('/vacancies', async (req, res) => {
     }
 
     // State type filter (HOME/OTHER) - Auto-set based on home_state logic
+    // Ensure case-insensitivity with Op.iLike, matching database values like 'HOME' or 'OTHER'
     if (state_type) {
-      whereClause.state_type = state_type.toUpperCase();
+      whereClause.state_type = { [Op.iLike]: `%${state_type.toUpperCase()}%` };
     } else if (home_state) {
       // If home_state is provided, prioritize "Home" state type
-      // You can customize this logic based on your business rules
-      whereClause.state_type = { [Op.iLike]: '%Home%' };
+      // Assuming database stores 'HOME' in all caps.
+      whereClause.state_type = { [Op.iLike]: '%HOME%' };
     }
 
     // School name filter
@@ -371,7 +380,7 @@ router.get('/vacancies', async (req, res) => {
       whereClause.vacancies = { [Op.gte]: parseInt(min_vacancies) };
     }
     if (max_vacancies) {
-      whereClause.vacancies = whereClause.vacancies 
+      whereClause.vacancies = whereClause.vacancies
         ? { ...whereClause.vacancies, [Op.lte]: parseInt(max_vacancies) }
         : { [Op.lte]: parseInt(max_vacancies) };
     }
@@ -379,14 +388,14 @@ router.get('/vacancies', async (req, res) => {
     // Determine ordering
     let orderField = 'school_name';
     let orderDir = 'ASC';
-    
+
     if (order_by) {
       const validFields = ['school_name', 'vacancies', 'state', 'class_level', 'gender', 'category', 'state_type'];
       if (validFields.includes(order_by)) {
         orderField = order_by;
       }
     }
-    
+
     if (order_direction && ['ASC', 'DESC'].includes(order_direction.toUpperCase())) {
       orderDir = order_direction.toUpperCase();
     }
@@ -404,6 +413,8 @@ router.get('/vacancies', async (req, res) => {
         'state',
         'vacancies'
       ]
+      // Optional: Uncomment for debugging to see the SQL query in your console
+      // logging: console.log,
     };
 
     // Add limit if specified (max 1000 for safety)
@@ -412,6 +423,8 @@ router.get('/vacancies', async (req, res) => {
       queryOptions.limit = limitValue;
     }
 
+    // Ensure 'Vacancy' model is correctly imported and available in your scope
+    // Example: const Vacancy = require('../models/Vacancy');
     const vacancies = await Vacancy.findAll(queryOptions);
 
     // Calculate total vacancies for summary
@@ -429,10 +442,11 @@ router.get('/vacancies', async (req, res) => {
         };
       }
       acc[schoolName].total_vacancies += vacancy.vacancies;
-      
+
+      // Ensure the classKey reflects the *database* values for breakdown clarity
       const classKey = `${vacancy.class_level}_${vacancy.gender}_${vacancy.category}_${vacancy.state_type}`;
       acc[schoolName].class_breakdown[classKey] = vacancy.vacancies;
-      
+
       return acc;
     }, {});
 
@@ -448,9 +462,9 @@ router.get('/vacancies', async (req, res) => {
       filters: {
         class_level,
         home_state,
-        category,
+        category, // This will show 'GEN' if that's what was passed in the query
         gender,
-        state_type,
+        state_type, // This will show the original state_type passed (e.g., 'home')
         school_name,
         min_vacancies,
         max_vacancies,
@@ -465,8 +479,9 @@ router.get('/vacancies', async (req, res) => {
     console.log(`   Records returned: ${vacancies.length}`);
     console.log(`   Total vacancies: ${totalVacancies}`);
     console.log(`   Unique schools: ${Object.keys(schoolSummary).length}`);
+    // Log the actual whereClause used for database query
     console.log(`   Where clause:`, whereClause);
-    console.log(`   Active filters:`, Object.fromEntries(Object.entries(responseData.filters).filter(([key, value]) => value !== null && value !== undefined)));
+    console.log(`   Active filters (from request):`, Object.fromEntries(Object.entries(responseData.filters).filter(([key, value]) => value !== null && value !== undefined)));
 
     res.status(200).json(responseData);
   } catch (error) {
@@ -485,13 +500,7 @@ router.get('/vacancy-stats', async (req, res) => {
     const { class_level, home_state, category, gender, state_type } = req.query;
     
     const whereClause = {};
-    if (state_type) {
-      // Convert incoming state_type to uppercase for consistent comparison, but use iLike for the database query
-      whereClause.state_type = { [Op.iLike]: `%${state_type.toUpperCase()}%` };
-    } else if (home_state) {
-      // If home_state is provided, prioritize "Home" state type with case-insensitive matching
-      whereClause.state_type = { [Op.iLike]: '%Home%' };
-    }
+
     // Apply same filters as main vacancy endpoint
     if (class_level && ['VI', 'IX', '6', '9'].includes(class_level)) {
       const normalizedClass = (class_level === '6' || class_level === 'VI') ? 'VI' : 'IX';

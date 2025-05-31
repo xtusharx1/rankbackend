@@ -485,7 +485,13 @@ router.get('/vacancy-stats', async (req, res) => {
     const { class_level, home_state, category, gender, state_type } = req.query;
     
     const whereClause = {};
-
+    if (state_type) {
+      // Convert incoming state_type to uppercase for consistent comparison, but use iLike for the database query
+      whereClause.state_type = { [Op.iLike]: `%${state_type.toUpperCase()}%` };
+    } else if (home_state) {
+      // If home_state is provided, prioritize "Home" state type with case-insensitive matching
+      whereClause.state_type = { [Op.iLike]: '%Home%' };
+    }
     // Apply same filters as main vacancy endpoint
     if (class_level && ['VI', 'IX', '6', '9'].includes(class_level)) {
       const normalizedClass = (class_level === '6' || class_level === 'VI') ? 'VI' : 'IX';
